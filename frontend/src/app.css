@@ -144,6 +144,8 @@ button, .q-btn { letter-spacing: 0; }
 .course-detail-meta { justify-content: flex-start; }
 .course-detail-meta strong { color: var(--ink); font-weight: 600; }
 .tower-list { display: grid; gap: 14px; }
+.tower-module { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #fff; border: 1px solid var(--line); }
+.tower-module-icon { display: grid; flex: 0 0 40px; place-items: center; width: 40px; height: 40px; color: var(--green); background: #edf3ed; border-radius: 4px; }
 .tower-floor { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #fff; border: 1px solid var(--line); }
 .tower-floor-copy { display: grid; flex: 1; gap: 4px; }
 .tower-floor-copy strong { color: #35443b; font-size: 13px; }

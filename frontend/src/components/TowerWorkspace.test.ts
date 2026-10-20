@@ -26,13 +26,18 @@ function mountFor(role: 'student' | 'admin' | 'instructor') {
   return mount(TowerWorkspace, { props: { role }, global: { plugins: [Quasar] } })
 }
 
+async function openFirstFloor(wrapper: ReturnType<typeof mountFor>) {
+  await wrapper.find('.tower-module .primary-button').trigger('click')
+  await wrapper.find('.tower-floor .primary-button').trigger('click')
+}
+
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Code Spire battle floors', () => {
   it('lets a student win by playing both Premium Attacks', async () => {
     const wrapper = mountFor('student')
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text().includes('Enter floor 1'))?.trigger('click')
+    await openFirstFloor(wrapper)
 
     await wrapper.findAll('button.hand-card')[0].trigger('click')
     await wrapper.find('button.end-turn').trigger('click')
@@ -50,7 +55,7 @@ describe('Code Spire battle floors', () => {
   it('stops a student from spending more than 3 energy and loses when the bug survives', async () => {
     const wrapper = mountFor('student')
     await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text().includes('Enter floor 1'))?.trigger('click')
+    await openFirstFloor(wrapper)
 
     const cards = wrapper.findAll('button.hand-card')
     await cards[0].trigger('click')
@@ -69,11 +74,39 @@ describe('Code Spire battle floors', () => {
     const wrapper = mountFor('instructor')
     await flushPromises()
 
+    expect(wrapper.find('.tower-stage').exists()).toBe(false)
+    await wrapper.find('.tower-module .primary-button').trigger('click')
     expect(wrapper.text()).toContain('Floor 1 Battle: Requirements Analysis')
     expect(wrapper.findAll('.correct-tag')).toHaveLength(2)
     expect(wrapper.text()).toContain('Rewrite vague wishes')
     expect(wrapper.find('button.hand-card').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Enter floor')
+    wrapper.unmount()
+  })
+
+  it('does not reveal numeric card effects to students and provides hover descriptions', async () => {
+    const wrapper = mountFor('student')
+    await flushPromises()
+    expect(wrapper.find('.tower-floor').exists()).toBe(false)
+    await wrapper.find('.tower-module .primary-button').trigger('click')
+    expect(wrapper.find('.tower-floor').exists()).toBe(true)
+    await wrapper.find('.tower-floor .primary-button').trigger('click')
+
+    const cards = wrapper.findAll('button.hand-card')
+    expect(cards.map((item) => item.text())).toEqual([
+      'Testable Requirement RewriteAttack · 2 energy',
+      'Quick PatchAttack · 1 energy',
+      'Rubber DuckDefend · 1 energy',
+    ])
+    expect(cards[0].attributes('title')).toContain('specific, verifiable requirement')
+    expect(cards[0].attributes('aria-label')).toContain('specific, verifiable requirement')
+    expect(wrapper.text()).not.toMatch(/(?:15|8|5) damage|self-damage|for 10 damage|Block 8/)
+
+    await wrapper.find('button.end-turn').trigger('click')
+    const secondTurnCards = wrapper.findAll('button.hand-card')
+    expect(secondTurnCards[2].text()).toBe('Gold PlatingCurse · 1 energy')
+    expect(secondTurnCards[2].attributes('title')).toContain('unrequested features')
+    expect(wrapper.text()).not.toContain('self-damage')
     wrapper.unmount()
   })
 })

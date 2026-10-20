@@ -17,6 +17,7 @@ const props = defineProps<{ role: Role }>()
 const stages = ref<Stage[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const moduleSelected = ref(false)
 const active = ref<Stage | null>(null)
 const turn = ref<1 | 2>(1)
 const playerHp = ref(PLAYER_MAX_HP)
@@ -46,6 +47,30 @@ function bullets(text: string): string[] {
 function cardEffect(card: Card): string {
   const label = { Attack: 'damage', Defend: 'block', Curse: 'self-damage' }[card.card_type]
   return `${card.card_type} · ${card.energy_cost} energy · ${card.value} ${label}`
+}
+
+function studentCardSummary(card: Card): string {
+  return `${card.card_type} · ${card.energy_cost} energy`
+}
+
+function cardDescription(card: Card): string {
+  const descriptions: Record<string, string> = {
+    'Testable Requirement Rewrite': 'Turn a vague request into a specific, verifiable requirement.',
+    'MoSCoW Prioritization': 'Sort requests into Must, Should, Could, and Won’t to control scope.',
+    'Quick Patch': 'A fast change may ease a symptom without fixing its root cause.',
+    'Rubber Duck': 'Explain the problem aloud to clarify your reasoning.',
+    'Gold Plating': 'Adding unrequested features expands scope instead of meeting priorities.',
+    'Env File and Gitignore': 'Keep development secrets in .env and exclude that file from version control.',
+    'Platform Environment Variables': 'Store production secrets in the hosting platform, outside frontend code.',
+    'Hardcoded Secret': 'A secret in source code can leak to the repository or browser.',
+    'Integration Test': 'Check that combined modules agree on their interfaces and data.',
+    'Regression Test Suite': 'Rerun existing tests to catch previously working features that broke.',
+    'Skip Tests and Ship': 'Skipping verification can send defects straight to production.',
+    'Monitoring and Alerting': 'Watch service metrics and notify the team when they cross thresholds.',
+    'Canary Deployment': 'Release to a small portion first, then expand when results look healthy.',
+    'Big Bang Deploy': 'Replace the whole release at once, increasing downtime and rollback risk.',
+  }
+  return descriptions[card.title] ?? 'Use this tool to respond to the incident.'
 }
 
 function turnsOf(stage: Stage) {
@@ -89,13 +114,13 @@ function playCard(card: Card) {
   played.value.push(card.card_id)
   if (card.card_type === 'Attack') {
     enemyHp.value = Math.max(0, enemyHp.value - card.value)
-    log.value.push(`${card.title} deals ${card.value} damage.`)
+    log.value.push(`${card.title} strikes the bug.`)
   } else if (card.card_type === 'Defend') {
     block.value += card.value
-    log.value.push(`${card.title} gives ${card.value} block.`)
+    log.value.push(`${card.title} raises a guard.`)
   } else {
     playerHp.value = Math.max(0, playerHp.value - card.value)
-    log.value.push(`${card.title} costs you ${card.value} HP.`)
+    log.value.push(`${card.title} weakens you.`)
   }
   if (enemyHp.value <= 0) outcome.value = 'won'
   else if (playerHp.value <= 0) outcome.value = 'lost'
@@ -105,7 +130,7 @@ function endTurn() {
   if (!active.value || outcome.value) return
   const damage = Math.max(0, intentDamage.value - block.value)
   playerHp.value = Math.max(0, playerHp.value - damage)
-  log.value.push(`${active.value.enemy_name} hits for ${damage} after your block.`)
+  log.value.push(`${active.value.enemy_name} attacks through your guard.`)
   if (playerHp.value <= 0 || turn.value === 2) {
     outcome.value = 'lost'
     return
@@ -125,8 +150,19 @@ onMounted(loadStages)
     <q-banner v-if="errorMessage" rounded class="error-banner">{{ errorMessage }}</q-banner>
     <div v-if="loading" class="loading-state"><q-spinner-dots size="28px" color="primary" /> Loading floors…</div>
 
+    <template v-else-if="!moduleSelected">
+      <div class="tower-module-list">
+        <article class="tower-module">
+          <span class="tower-module-icon"><q-icon name="terminal" size="23px" /></span>
+          <div class="tower-floor-copy"><strong>Software Development Lifecycle</strong><small>4 floors · Requirements through deployment and maintenance</small></div>
+          <q-btn unelevated no-caps class="primary-button" label="Open module" icon-right="arrow_forward" @click="moduleSelected = true" />
+        </article>
+      </div>
+    </template>
+
     <template v-else-if="props.role === 'student'">
       <div v-if="!active" class="tower-list">
+        <div class="tower-battle-top"><div><p class="eyebrow"><span class="eyebrow-line"></span> SOFTWARE DEVELOPMENT LIFECYCLE</p><h3>Choose a floor</h3></div><q-btn flat no-caps icon="west" label="Back to modules" @click="moduleSelected = false" /></div>
         <article v-for="stage in stages" :key="stage.floor" class="tower-floor">
           <span class="tower-badge">Floor {{ stage.floor }}</span>
           <div class="tower-floor-copy"><strong>{{ stage.topic_name }}</strong><small>{{ stage.enemy_name }} · {{ stage.enemy_max_hp }} HP</small></div>
@@ -140,12 +176,12 @@ onMounted(loadStages)
         <div class="tower-stats">
           <div><span>You</span><strong class="player-hp">{{ playerHp }} / 40 HP</strong><q-linear-progress :value="playerHp / 40" color="positive" /></div>
           <div><span>{{ active.enemy_name }}</span><strong class="enemy-hp">{{ enemyHp }} / {{ active.enemy_max_hp }} HP</strong><q-linear-progress :value="enemyHp / active.enemy_max_hp" color="negative" /></div>
-          <div><span>Turn {{ turn }} of 2</span><strong class="energy">{{ energy }} / 3 energy</strong><small>Block {{ block }}</small></div>
+          <div><span>Turn {{ turn }} of 2</span><strong class="energy">{{ energy }} / 3 energy</strong><small>{{ block > 0 ? 'Guard active' : 'No guard' }}</small></div>
         </div>
-        <p v-if="!outcome" class="tower-intent">Enemy intent: {{ intent }} ({{ intentDamage }} damage)</p>
+        <p v-if="!outcome" class="tower-intent">Enemy intent: {{ intent }}</p>
         <div class="tower-hand">
-          <button v-for="card in hand" :key="card.card_id" type="button" class="hand-card" :class="[card.card_type.toLowerCase(), { used: played.includes(card.card_id) }]" :disabled="!canPlay(card)" @click="playCard(card)">
-            <strong>{{ card.title }}</strong><small>{{ cardEffect(card) }}</small>
+          <button v-for="card in hand" :key="card.card_id" type="button" class="hand-card" :class="[card.card_type.toLowerCase(), { used: played.includes(card.card_id) }]" :disabled="!canPlay(card)" :title="cardDescription(card)" :aria-label="`${card.title}: ${cardDescription(card)} ${card.energy_cost} energy`" @click="playCard(card)">
+            <strong>{{ card.title }}</strong><small>{{ studentCardSummary(card) }}</small>
           </button>
         </div>
         <div v-if="!outcome" class="tower-actions"><q-btn unelevated no-caps class="primary-button end-turn" label="End turn" @click="endTurn" /></div>
@@ -159,12 +195,13 @@ onMounted(loadStages)
     </template>
 
     <div v-else class="tower-list">
+      <div class="tower-battle-top"><div><p class="eyebrow"><span class="eyebrow-line"></span> SOFTWARE DEVELOPMENT LIFECYCLE</p><h3>Four floors</h3></div><q-btn flat no-caps icon="west" label="Back to modules" @click="moduleSelected = false" /></div>
       <article v-for="stage in stages" :key="stage.floor" class="tower-stage">
         <div class="tower-battle-top"><div><span class="tower-badge">Floor {{ stage.floor }}</span><h3>{{ stage.title }}</h3></div><small>{{ stage.enemy_name }} · {{ stage.enemy_max_hp }} HP</small></div>
         <p v-for="part in paragraphs(stage.incident_brief)" :key="part" class="tower-text">{{ part }}</p>
         <div v-for="item in turnsOf(stage)" :key="item.turn" class="tower-turn">
           <p class="tower-intent">Turn {{ item.turn }}: {{ item.intent }} ({{ item.damage }} damage)</p>
-          <ul class="tower-cards"><li v-for="card in item.hand" :key="card.card_id" :class="{ correct: card.correct_choice }"><strong>{{ card.title }}</strong> <small>{{ cardEffect(card) }}</small><span v-if="card.correct_choice" class="correct-tag">Correct</span></li></ul>
+          <ul class="tower-cards"><li v-for="card in item.hand" :key="card.card_id" :class="{ correct: card.correct_choice }" :title="cardDescription(card)"><strong>{{ card.title }}</strong> <small>{{ cardEffect(card) }}</small><span v-if="card.correct_choice" class="correct-tag">Correct</span></li></ul>
         </div>
         <ul class="tower-reference"><li v-for="line in bullets(stage.quick_reference)" :key="line">{{ line }}</li></ul>
       </article>
