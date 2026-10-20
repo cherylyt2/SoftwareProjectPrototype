@@ -21,6 +21,12 @@ class LoginRequest(RequestModel):
     role: RoleName
 
 
+class PrototypeSessionRequest(RequestModel):
+    """Role selected for a credential-free prototype session."""
+
+    role: RoleName
+
+
 class AccountCreateRequest(RequestModel):
     """Details for an account created by an administrator."""
 

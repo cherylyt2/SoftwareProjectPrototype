@@ -1,13 +1,15 @@
 """Login, logout, session, and administrator account endpoints."""
 
-from flask import Blueprint, jsonify, request, session
+import secrets
+
+from flask import Blueprint, current_app, jsonify, request, session
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import db
 from models import User
-from schemas import AccountCreateRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest
+from schemas import AccountCreateRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, PrototypeSessionRequest
 from security import current_user, require_roles, user_payload
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -45,14 +47,60 @@ def login():
     return jsonify(user=user_payload(user))
 
 
+@auth_bp.post("/prototype-session")
+def create_prototype_session():
+    """Issue a role-specific demo session when prototype mode is enabled."""
+    if not current_app.config["PROTOTYPE_MODE"]:
+        return jsonify(error="Prototype sessions are disabled."), 403
+
+    payload, error = parse_payload(PrototypeSessionRequest)
+    if error:
+        return error
+
+    role_names = {
+        "admin": "Prototype Administrator",
+        "instructor": "Prototype Instructor",
+        "student": "Prototype Student",
+    }
+    username = f"prototype-{payload.role}"
+    user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+    if user is None:
+        user = User(
+            username=username,
+            display_name=role_names[payload.role],
+            role=payload.role,
+            password_hash=generate_password_hash(secrets.token_urlsafe(32)),
+            must_change_password=False,
+        )
+        db.session.add(user)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+            if user is None:
+                raise
+
+    if user.role != payload.role:
+        return jsonify(error="The prototype account has an invalid role."), 409
+    user.is_active = True
+    user.must_change_password = False
+    db.session.commit()
+
+    session.clear()
+    session["user_id"] = user.id
+    session.permanent = True
+    return jsonify(user=user_payload(user))
+
+
 @auth_bp.get("/session")
 def get_session():
     """Return the current account or an empty session response."""
     user = current_user()
     if user is None or not user.is_active:
         session.clear()
-        return jsonify(user=None)
-    return jsonify(user=user_payload(user))
+        return jsonify(user=None, prototype_mode=current_app.config["PROTOTYPE_MODE"])
+    return jsonify(user=user_payload(user), prototype_mode=current_app.config["PROTOTYPE_MODE"])
 
 
 @auth_bp.post("/logout")

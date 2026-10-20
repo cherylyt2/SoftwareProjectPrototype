@@ -8,6 +8,7 @@ A role-based learning platform prototype built with Vue 3, Quasar, Flask, SQLAlc
 - Admin account creation, course visibility/locking, and course roster management.
 - Instructor-owned course authoring, immutable content revisions, enrollments, and editable AI drafts.
 - Student lessons, server-scored quiz attempts, revision-aware score history, and personal learning paths.
+- Code Spire: four SDLC battle floors loaded from Markdown files in `backend/stages/`. Students play a fixed two-turn card fight (3 energy per turn, 40 HP, 30 HP enemies); admins and instructors see each floor read-only with the correct cards marked. To add a floor, add a file with the same flat front matter; the loader rejects files that break the card balance. Battle results are not saved.
 - OpenRouter generation using `nvidia/nemotron-3.5-lightning:free`.
 - In-memory text extraction for PDF, PPTX, DOCX, and legacy DOC when `antiword` is installed. Original uploads are not retained.
 
@@ -67,7 +68,9 @@ A role-based learning platform prototype built with Vue 3, Quasar, Flask, SQLAlc
 
    On Windows the copied `python3.exe` name helps the Vercel Python runtime find the active virtual environment; it is inside the ignored `.venv` folder.
 
-Development sign-in: select **Administrator**, username `admin`, password `password`. The first sign-in requires a password change. This seed is disabled outside development.
+By default, local development uses prototype role entry: choose Administrator, Instructor, or Student and continue without credentials. Each role uses a stable demo account so existing workspace data and API permissions continue to work. Set `PROTOTYPE_MODE=false` to use normal username/password sign-in instead; the development-only seeded admin is `admin` / `password` and requires a password change.
+
+Prototype role entry is disabled by default in production. Setting `PROTOTYPE_MODE=true` allows anyone to select any role, including Administrator, so use it only for isolated demos and never as a production authentication policy.
 
 For a first production setup, set `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` (at least 12 characters) as private backend environment variables, then run `flask --app app bootstrap-admin` once. The command refuses to run if any administrator already exists. Remove the bootstrap variables after use.
 
@@ -75,6 +78,7 @@ For a first production setup, set `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PA
 
 - `DATABASE_URL`: Neon/PostgreSQL connection URL. SQLAlchemy uses psycopg 3.
 - `SECRET_KEY`: long random secret used to sign session cookies; required in production.
+- `PROTOTYPE_MODE`: optional `true`/`false` switch for credential-free role entry. Defaults to `true` in development and `false` in production.
 - `OPENROUTER_API_KEY`: server-side API key; never expose it through frontend environment variables.
 - `APP_URL`: optional URL sent as OpenRouter request metadata.
 

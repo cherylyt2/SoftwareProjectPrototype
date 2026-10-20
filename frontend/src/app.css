@@ -65,6 +65,7 @@ button, .q-btn { letter-spacing: 0; }
 .form-icon { display: grid; place-items: center; width: 44px; height: 44px; color: var(--green-deep); background: var(--lime); border-radius: 5px; }
 .form-heading .eyebrow { margin-bottom: 4px; font-size: 9px; }
 .form-heading h2 { margin: 0; color: var(--ink); font: 700 20px/1.2 'Manrope', sans-serif; }
+.prototype-note { margin: 0; color: #78867e; font-size: 12px; line-height: 1.6; }
 .field-label { display: block; margin: 15px 0 7px; color: #4e5b54; font-size: 12px; font-weight: 600; }
 .login-form .q-field--outlined .q-field__control::before { border-color: #dce4dd; }
 .login-form .q-field--focused .q-field__control::after { color: var(--green); }
@@ -142,6 +143,40 @@ button, .q-btn { letter-spacing: 0; }
 .status-dot.locked { background: #c28a42; }
 .course-detail-meta { justify-content: flex-start; }
 .course-detail-meta strong { color: var(--ink); font-weight: 600; }
+.tower-list { display: grid; gap: 14px; }
+.tower-floor { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #fff; border: 1px solid var(--line); }
+.tower-floor-copy { display: grid; flex: 1; gap: 4px; }
+.tower-floor-copy strong { color: #35443b; font-size: 13px; }
+.tower-floor-copy small { color: #8a968e; font-size: 11px; }
+.tower-badge { display: inline-block; padding: 5px 9px; color: var(--green-deep); background: var(--lime); border-radius: 3px; font-size: 10px; font-weight: 700; }
+.tower-battle, .tower-stage { display: grid; gap: 14px; padding: 20px; background: #fff; border: 1px solid var(--line); }
+.tower-battle-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.tower-battle-top h3 { margin: 8px 0 0; color: var(--ink); font: 700 18px/1.3 'Manrope', sans-serif; }
+.tower-text { margin: 0; color: #5d6b63; font-size: 12px; line-height: 1.7; }
+.tower-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.tower-stats > div { display: grid; gap: 6px; padding: 12px; background: var(--wash); border-radius: 4px; font-size: 11px; }
+.tower-stats span, .tower-stats small { color: #77847e; }
+.tower-stats strong { color: var(--ink); font-size: 13px; }
+.tower-intent { margin: 0; padding: 10px 12px; color: #873d2e; background: #fff0eb; border-radius: 4px; font-size: 12px; }
+.tower-hand { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.hand-card { display: grid; gap: 8px; padding: 16px 12px; text-align: left; color: var(--ink); background: #fff; border: 2px solid #dce6dc; border-radius: 6px; cursor: pointer; transition: transform 140ms, border-color 140ms; }
+.hand-card:hover:not(:disabled) { border-color: var(--green); transform: translateY(-3px); }
+.hand-card:disabled { cursor: not-allowed; opacity: 0.45; }
+.hand-card.attack { border-top: 5px solid var(--coral); }
+.hand-card.defend { border-top: 5px solid #5b9bd5; }
+.hand-card.curse { border-top: 5px solid #7a5a9c; }
+.hand-card strong { font-size: 13px; }
+.hand-card small { color: #77847e; font-size: 11px; }
+.tower-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.tower-log, .tower-reference, .tower-cards, .tower-result ul { margin: 0; padding-left: 18px; color: #5d6b63; font-size: 12px; line-height: 1.7; }
+.tower-result { display: grid; gap: 12px; padding: 16px; border-radius: 4px; }
+.tower-result.won { background: #eaf4e8; }
+.tower-result.lost { background: #fff0eb; }
+.tower-result h4 { margin: 0; color: var(--ink); font-size: 15px; }
+.tower-turn { display: grid; gap: 8px; }
+.tower-cards li.correct { color: var(--green-deep); font-weight: 600; }
+.correct-tag { margin-left: 8px; padding: 2px 6px; color: var(--green-deep); background: var(--lime); border-radius: 3px; font-size: 9px; font-weight: 700; }
+@media (max-width: 720px) { .tower-stats, .tower-hand { grid-template-columns: 1fr; } }
 .roster-panel { display: grid; gap: 9px; padding: 15px; background: #fff; border: 1px solid var(--line); }
 .roster-heading { display: flex; align-items: center; gap: 10px; }
 .roster-heading h3 { margin: 0; color: var(--ink); font: 700 13px/1.4 'Manrope', sans-serif; }

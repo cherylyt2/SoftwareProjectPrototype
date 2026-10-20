@@ -3,12 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import CourseWorkspace from './components/CourseWorkspace.vue'
 import LearningPathWorkspace from './components/LearningPathWorkspace.vue'
 import PeopleWorkspace from './components/PeopleWorkspace.vue'
+import TowerWorkspace from './components/TowerWorkspace.vue'
 
 type Role = 'admin' | 'instructor' | 'student'
 type Screen = 'welcome' | 'login' | 'workspace'
 
 const screen = ref<Screen>('welcome')
 const role = ref<Role>('student')
+const prototypeMode = ref(false)
+const entryReady = ref(false)
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
@@ -35,13 +38,14 @@ const roleDetails: Record<Role, { title: string; description: string; icon: stri
 const roleInfo = computed(() => roleDetails[role.value])
 const navigation = computed(() => {
   const common = [{ id: 'overview', label: 'Overview', icon: 'space_dashboard' }]
+  const tower = { id: 'tower', label: 'Code Spire', icon: 'sports_esports' }
   if (role.value === 'admin') {
-    return [...common, { id: 'courses', label: 'All courses', icon: 'menu_book' }, { id: 'people', label: 'People', icon: 'groups' }]
+    return [...common, { id: 'courses', label: 'All courses', icon: 'menu_book' }, { id: 'people', label: 'People', icon: 'groups' }, tower]
   }
   if (role.value === 'instructor') {
-    return [...common, { id: 'courses', label: 'My courses', icon: 'menu_book' }, { id: 'students', label: 'Students', icon: 'groups' }]
+    return [...common, { id: 'courses', label: 'My courses', icon: 'menu_book' }, { id: 'students', label: 'Students', icon: 'groups' }, tower]
   }
-  return [...common, { id: 'courses', label: 'My learning', icon: 'menu_book' }, { id: 'path', label: 'Self-learning', icon: 'route' }, { id: 'scores', label: 'Scores', icon: 'insights' }]
+  return [...common, { id: 'courses', label: 'My learning', icon: 'menu_book' }, { id: 'path', label: 'Self-learning', icon: 'route' }, tower, { id: 'scores', label: 'Scores', icon: 'insights' }]
 })
 const pageTitle = computed(() => activeSection.value === 'overview'
   ? 'Your learning space'
@@ -70,11 +74,35 @@ async function signIn() {
   }
 }
 
+async function startPrototypeSession() {
+  errorMessage.value = ''
+  loading.value = true
+  try {
+    const response = await fetch('/api/auth/prototype-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ role: role.value }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error ?? 'Unable to enter the prototype.')
+    userName.value = data.user.display_name || data.user.username
+    displayName.value = data.user.display_name || data.user.username
+    mustChangePassword.value = data.user.must_change_password
+    screen.value = 'workspace'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Unable to reach the prototype service.'
+  } finally {
+    loading.value = false
+  }
+}
+
 async function restoreSession() {
   try {
     const response = await fetch('/api/auth/session', { credentials: 'include' })
     if (!response.ok) return
     const data = await response.json()
+    prototypeMode.value = Boolean(data.prototype_mode)
     if (!data.user) return
     role.value = data.user.role
     userName.value = data.user.display_name || data.user.username
@@ -83,6 +111,8 @@ async function restoreSession() {
     screen.value = 'workspace'
   } catch {
     // Keep the welcome screen usable when the API is unavailable.
+  } finally {
+    entryReady.value = true
   }
 }
 
@@ -162,7 +192,7 @@ onMounted(restoreSession)
         <h1>Learning moves<br />you <em>forward.</em></h1>
         <p class="welcome-intro">Thoughtful courses, curious minds, and a clearer view of how far you can go.</p>
         <div class="welcome-actions">
-          <q-btn unelevated no-caps class="primary-button" label="Enter your learning space" icon-right="arrow_forward" @click="screen = 'login'" />
+          <q-btn unelevated no-caps class="primary-button" label="Enter your learning space" icon-right="arrow_forward" :disable="!entryReady" @click="screen = 'login'" />
           <!-- <span class="welcome-note">Choose your role to continue</span> -->
         </div>
       </div>
@@ -196,7 +226,7 @@ onMounted(restoreSession)
           </button>
         </div>
       </div>
-      <q-form class="login-form" @submit.prevent="signIn">
+      <q-form v-if="!prototypeMode" class="login-form" @submit.prevent="signIn">
         <div class="form-heading">
           <span class="form-icon"><q-icon :name="roleInfo.icon" size="22px" /></span>
           <div><p class="eyebrow">SIGN IN AS</p><h2>{{ roleInfo.title }}</h2></div>
@@ -209,6 +239,16 @@ onMounted(restoreSession)
         <q-btn type="submit" unelevated no-caps class="primary-button login-submit" :loading="loading" label="Sign in" icon-right="arrow_forward" />
         <button class="back-link" type="button" @click="screen = 'welcome'"><q-icon name="west" size="15px" /> Back to welcome</button>
       </q-form>
+      <section v-else class="login-form prototype-entry">
+        <div class="form-heading">
+          <span class="form-icon"><q-icon :name="roleInfo.icon" size="22px" /></span>
+          <div><p class="eyebrow">ENTER AS</p><h2>{{ roleInfo.title }}</h2></div>
+        </div>
+        <p class="prototype-note">Your role opens a demo workspace. No account details are needed.</p>
+        <q-banner v-if="errorMessage" rounded class="error-banner">{{ errorMessage }}</q-banner>
+        <q-btn unelevated no-caps class="primary-button login-submit" :loading="loading" :label="`Continue as ${roleInfo.title}`" icon-right="arrow_forward" @click="startPrototypeSession" />
+        <button class="back-link" type="button" @click="screen = 'welcome'"><q-icon name="west" size="15px" /> Back to welcome</button>
+      </section>
     </section>
   </main>
 
@@ -253,6 +293,7 @@ onMounted(restoreSession)
         <CourseWorkspace v-if="['overview', 'courses', 'scores'].includes(activeSection)" :role="role" :active-section="activeSection" />
         <PeopleWorkspace v-else-if="['people', 'students'].includes(activeSection)" :role="role" />
         <LearningPathWorkspace v-else-if="activeSection === 'path'" />
+        <TowerWorkspace v-else-if="activeSection === 'tower'" :role="role" />
         <footer class="content-footer"><span>Make room for what’s next.</span><span>Northstar Learning</span></footer>
       </main>
     </section>

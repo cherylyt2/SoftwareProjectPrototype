@@ -35,6 +35,38 @@ def test_login_validates_payload(client):
     assert response.json["error"] == "Invalid request."
 
 
+def test_prototype_session_creates_role_specific_demo_user(client):
+    """Prototype entry creates a normal session without weakening role checks."""
+    response = client.post("/api/auth/prototype-session", json={"role": "instructor"})
+
+    assert response.status_code == 200
+    assert response.json["user"]["role"] == "instructor"
+    assert response.json["user"]["username"] == "prototype-instructor"
+    assert response.json["user"]["must_change_password"] is False
+    assert client.get("/api/auth/session").json["prototype_mode"] is True
+    assert client.get("/api/users/students").status_code == 200
+    assert client.get("/api/users").status_code == 403
+
+
+def test_prototype_session_rejects_invalid_role(client):
+    """Role-only entry accepts only known platform roles."""
+    response = client.post("/api/auth/prototype-session", json={"role": "root"})
+
+    assert response.status_code == 400
+    assert client.get("/api/auth/session").json["user"] is None
+
+
+def test_prototype_session_is_disabled_when_configured_off(client, app):
+    """Production-style configuration keeps credential-free entry closed."""
+    app.config["PROTOTYPE_MODE"] = False
+
+    response = client.post("/api/auth/prototype-session", json={"role": "student"})
+
+    assert response.status_code == 403
+    assert response.json["error"] == "Prototype sessions are disabled."
+    assert client.get("/api/auth/session").json["prototype_mode"] is False
+
+
 def test_only_admin_can_create_accounts(client, accounts):
     """An instructor cannot create accounts through the admin endpoint."""
     login(client, "instructor")

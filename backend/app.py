@@ -17,6 +17,12 @@ def create_app(test_config: dict | None = None) -> Flask:
     load_dotenv()
     app = Flask(__name__)
     is_production = os.getenv("VERCEL_ENV") == "production" or os.getenv("FLASK_ENV") == "production"
+    prototype_mode_env = os.getenv("PROTOTYPE_MODE")
+    prototype_mode = (
+        prototype_mode_env.strip().lower() in {"1", "true", "yes", "on"}
+        if prototype_mode_env is not None
+        else not is_production
+    )
     database_url = os.getenv("DATABASE_URL")
     secret_key = os.getenv("SECRET_KEY")
 
@@ -38,6 +44,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 7,
         MAX_CONTENT_LENGTH=4 * 1024 * 1024,
         ENVIRONMENT="production" if is_production else "development",
+        PROTOTYPE_MODE=prototype_mode,
     )
     if test_config:
         app.config.update(test_config)
@@ -49,12 +56,14 @@ def create_app(test_config: dict | None = None) -> Flask:
     from course_routes import courses_bp
     from ai_routes import ai_bp
     from learning_path_routes import learning_paths_bp
+    from stage_routes import stages_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(courses_bp)
     app.register_blueprint(learning_paths_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(stages_bp)
 
     @app.get("/api/health")
     def health_check():
